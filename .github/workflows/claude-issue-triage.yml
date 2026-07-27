@@ -1,0 +1,66 @@
+name: Claude Issue Triage
+
+on:
+  issues:
+    types: [opened, edited]
+
+jobs:
+  triage:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      id-token: write
+    concurrency:
+      group: claude-issue-triage-${{ github.event.issue.number }}
+      cancel-in-progress: true
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Triage issue with Claude
+        uses: anthropics/claude-code-action@v1
+        env:
+          GH_TOKEN: ${{ github.token }}
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          claude_args: >-
+            --allowed-tools "Bash(gh issue view:*),Bash(gh issue edit:*),Bash(gh issue comment:*),Bash(gh label list:*),Bash(gh label create:*)"
+          prompt: |
+            Analiza el issue #${{ github.event.issue.number }} del repositorio ${{ github.repository }}
+            (usa `gh issue view ${{ github.event.issue.number }} --json title,body,labels,comments`).
+
+            Este proyecto es un Tetris en HTML/CSS/JS vanilla (ver CLAUDE.md en la raíz para
+            arquitectura: index.html, style.css, game.js). Usa ese contexto para ubicar a qué
+            parte del código probablemente afecta el issue.
+
+            Pasos:
+            1. Revisa las labels existentes con `gh label list`. Si ninguna encaja bien, crea una
+               nueva label descriptiva con `gh label create` (ej. area:rendering, area:controls,
+               area:scoring, priority:high/medium/low) antes de asignarla.
+            2. Asigna 1-3 labels apropiadas al issue con `gh issue edit ${{ github.event.issue.number }} --add-label "..."`
+               (no elimines labels puestas manualmente por humanos salvo que sean claramente incorrectas).
+            3. Publica UN comentario en el issue (`gh issue comment ${{ github.event.issue.number }} --body-file -`
+               o `--body`) en ESPAÑOL, en formato Markdown, con esta estructura:
+
+               ## 🔍 Diagnóstico automático
+
+               **Resumen:** (1-2 frases del problema/petición)
+
+               **Tipo:** bug / mejora / pregunta / duplicado / inválido
+
+               **Área probable del código:** (archivo(s) y función(es)/constante(s) de game.js
+               relevantes, con la ruta `game.js:` cuando aplique)
+
+               **Análisis:** (causa raíz probable o alcance de la funcionalidad pedida, pasos para
+               reproducir si es un bug, y qué se necesitaría cambiar a alto nivel)
+
+               **Información faltante:** (si aplica: qué se necesita del reportante para avanzar)
+
+               **Labels asignadas:** (lista de labels que aplicaste y por qué)
+
+            Si el issue ya tiene un comentario previo de diagnóstico automático tuyo (búscalo por el
+            encabezado "## 🔍 Diagnóstico automático"), edítalo con `gh issue comment --edit-last`
+            en lugar de crear uno nuevo, para no duplicar comentarios cuando el issue se edita varias veces.
