@@ -10,6 +10,8 @@
       var saved = localStorage.getItem('tetris-theme');
       var theme = saved || (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
       document.documentElement.setAttribute('data-theme', theme);
+      var skin = localStorage.getItem('tetris-skin') || 'retro';
+      document.documentElement.setAttribute('data-skin', skin);
     })();
   </script>
 </head>
@@ -52,6 +54,16 @@
         <div class="panel-section">
           <span class="label">NEXT</span>
           <canvas id="next-canvas" width="120" height="120"></canvas>
+        </div>
+
+        <div class="panel-section">
+          <span class="label">SKIN</span>
+          <select id="skin-select" class="skin-select">
+            <option value="retro">Retro</option>
+            <option value="neon">Neon</option>
+            <option value="pastel">Pastel</option>
+            <option value="pixel">Pixel Art</option>
+          </select>
         </div>
 
         <div class="panel-section controls">
