@@ -4,17 +4,6 @@ const COLS = 10;
 const ROWS = 20;
 const BLOCK = 30;
 
-const COLORS = [
-  null,
-  '#4dd0e1', // I - cyan
-  '#ffd54f', // O - yellow
-  '#ba68c8', // T - purple
-  '#81c784', // S - green
-  '#e57373', // Z - red
-  '#7986cb', // J - indigo
-  '#ffb74d', // L - orange
-];
-
 const PIECES = [
   null,
   [[0,0,0,0],[1,1,1,1],[0,0,0,0],[0,0,0,0]], // I
@@ -28,6 +17,116 @@ const PIECES = [
 
 const LINE_SCORES = [0, 100, 300, 500, 800];
 
+function roundedRectPath(context, x, y, w, h, r) {
+  context.beginPath();
+  context.moveTo(x + r, y);
+  context.arcTo(x + w, y, x + w, y + h, r);
+  context.arcTo(x + w, y + h, x, y + h, r);
+  context.arcTo(x, y + h, x, y, r);
+  context.arcTo(x, y, x + w, y, r);
+  context.closePath();
+}
+
+function shadeColor(hex, percent) {
+  const num = parseInt(hex.slice(1), 16);
+  const clamp = v => Math.min(255, Math.max(0, v));
+  const r = clamp((num >> 16) + Math.round(2.55 * percent));
+  const g = clamp(((num >> 8) & 0xff) + Math.round(2.55 * percent));
+  const b = clamp((num & 0xff) + Math.round(2.55 * percent));
+  return `rgb(${r}, ${g}, ${b})`;
+}
+
+function drawBlockRetro(context, x, y, colorIndex, size, alpha) {
+  const color = SKINS.retro.colors[colorIndex - 1];
+  const px = x * size + 1, py = y * size + 1, s = size - 2;
+  context.globalAlpha = alpha;
+  context.fillStyle = color;
+  context.fillRect(px, py, s, s);
+  context.fillStyle = 'rgba(255,255,255,0.12)';
+  context.fillRect(px, py, s, 4);
+  context.globalAlpha = 1;
+}
+
+function drawBlockNeon(context, x, y, colorIndex, size, alpha) {
+  const color = SKINS.neon.colors[colorIndex - 1];
+  const px = x * size + 2, py = y * size + 2, s = size - 4;
+  context.save();
+  context.globalAlpha = alpha;
+  context.shadowColor = color;
+  context.shadowBlur = 16;
+  context.fillStyle = color;
+  context.fillRect(px, py, s, s);
+  context.shadowBlur = 0;
+  context.fillStyle = 'rgba(0,0,0,0.35)';
+  context.fillRect(px + 3, py + 3, s - 6, s - 6);
+  context.fillStyle = color;
+  context.globalAlpha = alpha * 0.9;
+  context.fillRect(px + 5, py + 5, s - 10, s - 10);
+  context.strokeStyle = 'rgba(255,255,255,0.6)';
+  context.lineWidth = 1;
+  context.globalAlpha = alpha;
+  context.strokeRect(px + 0.5, py + 0.5, s - 1, s - 1);
+  context.restore();
+}
+
+function drawBlockPastel(context, x, y, colorIndex, size, alpha) {
+  const color = SKINS.pastel.colors[colorIndex - 1];
+  const px = x * size + 2, py = y * size + 2, s = size - 4;
+  const r = Math.min(6, s / 2);
+  context.save();
+  context.globalAlpha = alpha;
+  roundedRectPath(context, px, py, s, s, r);
+  context.fillStyle = color;
+  context.fill();
+  context.clip();
+  context.fillStyle = 'rgba(255,255,255,0.4)';
+  context.fillRect(px, py, s, s * 0.4);
+  context.restore();
+}
+
+function drawBlockPixel(context, x, y, colorIndex, size, alpha) {
+  const color = SKINS.pixel.colors[colorIndex - 1];
+  const px = x * size + 1, py = y * size + 1, s = size - 2;
+  const cells = 4;
+  const cell = s / cells;
+  const dark = shadeColor(color, -20);
+  const light = shadeColor(color, 20);
+  context.save();
+  context.globalAlpha = alpha;
+  context.fillStyle = color;
+  context.fillRect(px, py, s, s);
+  for (let i = 0; i < cells; i++) {
+    for (let j = 0; j < cells; j++) {
+      const isEdge = i === 0 || j === 0 || i === cells - 1 || j === cells - 1;
+      context.fillStyle = isEdge ? dark : ((i + j) % 2 === 0 ? light : color);
+      context.fillRect(px + i * cell, py + j * cell, Math.ceil(cell), Math.ceil(cell));
+    }
+  }
+  context.strokeStyle = shadeColor(color, -35);
+  context.lineWidth = 1;
+  context.strokeRect(px + 0.5, py + 0.5, s - 1, s - 1);
+  context.restore();
+}
+
+const SKINS = {
+  retro: {
+    colors: ['#4dd0e1', '#ffd54f', '#ba68c8', '#81c784', '#e57373', '#7986cb', '#ffb74d'],
+    draw: drawBlockRetro,
+  },
+  neon: {
+    colors: ['#00e5ff', '#f4ff00', '#e14dff', '#00ff9d', '#ff1744', '#4d7bff', '#ff9100'],
+    draw: drawBlockNeon,
+  },
+  pastel: {
+    colors: ['#a8e6e6', '#fff3b0', '#d9b8e8', '#c1e8c1', '#f7b8b8', '#b8c4f0', '#f9d5a7'],
+    draw: drawBlockPastel,
+  },
+  pixel: {
+    colors: ['#4dd0e1', '#ffd54f', '#ba68c8', '#81c784', '#e57373', '#7986cb', '#ffb74d'],
+    draw: drawBlockPixel,
+  },
+};
+
 const canvas = document.getElementById('board');
 const ctx = canvas.getContext('2d');
 const nextCanvas = document.getElementById('next-canvas');
@@ -40,12 +139,15 @@ const overlayTitle = document.getElementById('overlay-title');
 const overlayScore = document.getElementById('overlay-score');
 const restartBtn = document.getElementById('restart-btn');
 const themeToggleBtn = document.getElementById('theme-toggle');
+const skinSelect = document.getElementById('skin-select');
 
 const THEME_KEY = 'tetris-theme';
+const SKIN_KEY = 'tetris-skin';
 
 let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId;
 
 let gridColor;
+let currentSkin = 'retro';
 
 function applyTheme(theme) {
   document.documentElement.setAttribute('data-theme', theme);
@@ -65,6 +167,23 @@ themeToggleBtn.addEventListener('click', () => {
 });
 
 applyTheme(document.documentElement.getAttribute('data-theme') || 'dark');
+
+function applySkin(skin) {
+  currentSkin = SKINS[skin] ? skin : 'retro';
+  document.documentElement.setAttribute('data-skin', currentSkin);
+  skinSelect.value = currentSkin;
+  if (typeof current !== 'undefined' && current) draw();
+  if (typeof next !== 'undefined' && next) drawNext();
+}
+
+function setSkin(skin) {
+  applySkin(skin);
+  localStorage.setItem(SKIN_KEY, skin);
+}
+
+skinSelect.addEventListener('change', e => setSkin(e.target.value));
+
+applySkin(document.documentElement.getAttribute('data-skin') || 'retro');
 
 function createBoard() {
   return Array.from({ length: ROWS }, () => new Array(COLS).fill(0));
@@ -182,14 +301,7 @@ function updateHUD() {
 
 function drawBlock(context, x, y, colorIndex, size, alpha) {
   if (!colorIndex) return;
-  const color = COLORS[colorIndex];
-  context.globalAlpha = alpha ?? 1;
-  context.fillStyle = color;
-  context.fillRect(x * size + 1, y * size + 1, size - 2, size - 2);
-  // highlight
-  context.fillStyle = 'rgba(255,255,255,0.12)';
-  context.fillRect(x * size + 1, y * size + 1, size - 2, 4);
-  context.globalAlpha = 1;
+  SKINS[currentSkin].draw(context, x, y, colorIndex, size, alpha ?? 1);
 }
 
 function drawGrid() {

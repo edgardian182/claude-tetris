@@ -172,6 +172,41 @@ body {
   transition: background 0.2s ease, border-color 0.2s ease;
 }
 
+/* ---- Selector de skin ---- */
+.skin-select {
+  background: var(--color-kbd-bg);
+  border: 1px solid var(--color-kbd-border);
+  color: var(--color-text);
+  border-radius: 4px;
+  padding: 6px 8px;
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.skin-select:focus-visible {
+  outline: 2px solid var(--color-value);
+  outline-offset: 2px;
+}
+
+/* ---- Skins: flavor del contenedor del tablero ---- */
+[data-skin='neon'] #board,
+[data-skin='neon'] #next-canvas {
+  background: #05050a;
+  box-shadow: 0 0 25px rgba(0, 229, 255, 0.35), var(--shadow-board);
+  transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+[data-skin='pastel'] #board,
+[data-skin='pastel'] #next-canvas {
+  border-radius: 16px;
+}
+
+[data-skin='pixel'] #board,
+[data-skin='pixel'] #next-canvas {
+  image-rendering: pixelated;
+}
+
 /* ---- Controles ---- */
 .controls ul {
   list-style: none;
